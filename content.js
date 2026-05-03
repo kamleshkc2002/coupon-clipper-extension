@@ -21,9 +21,12 @@
   const MAX_NO_PROGRESS_PASSES = contentConfig.maxNoProgressPasses;
   const CONTROL_SELECTOR = contentConfig.controlSelector;
   const CLIP_PATTERNS = contentConfig.clipPatterns;
+  const CARD_SCOPED_CLIP_PATTERNS =
+    contentConfig.cardScopedClipPatterns || [];
   const EXCLUDED_PATTERNS = contentConfig.excludedPatterns;
   const CARD_SELECTOR = contentConfig.cardSelector;
   const CLIPPED_STATE_PATTERNS = contentConfig.clippedStatePatterns;
+  const REQUIRED_CARD_PATTERNS = contentConfig.requiredCardPatterns || [];
 
   let activeRun = null;
   let clickedSignatures = new Set();
@@ -144,20 +147,6 @@
     ].join("|");
   }
 
-  function looksLikeClipAction(element) {
-    const label = getElementLabel(element);
-
-    if (!label) {
-      return false;
-    }
-
-    if (EXCLUDED_PATTERNS.some((pattern) => pattern.test(label))) {
-      return false;
-    }
-
-    return CLIP_PATTERNS.some((pattern) => pattern.test(label));
-  }
-
   function getCouponCard(element) {
     return element.closest(CARD_SELECTOR);
   }
@@ -172,6 +161,43 @@
     const cardLabel = getElementLabel(card);
 
     return CLIPPED_STATE_PATTERNS.some((pattern) => pattern.test(cardLabel));
+  }
+
+  function isInsideRequiredCouponCard(element) {
+    if (REQUIRED_CARD_PATTERNS.length === 0) {
+      return true;
+    }
+
+    const card = getCouponCard(element);
+
+    if (!card) {
+      return false;
+    }
+
+    const cardLabel = getElementLabel(card);
+
+    return REQUIRED_CARD_PATTERNS.every((pattern) => pattern.test(cardLabel));
+  }
+
+  function looksLikeClipAction(element) {
+    const label = getElementLabel(element);
+
+    if (!label) {
+      return false;
+    }
+
+    if (EXCLUDED_PATTERNS.some((pattern) => pattern.test(label))) {
+      return false;
+    }
+
+    if (CLIP_PATTERNS.some((pattern) => pattern.test(label))) {
+      return true;
+    }
+
+    return (
+      CARD_SCOPED_CLIP_PATTERNS.some((pattern) => pattern.test(label)) &&
+      isInsideRequiredCouponCard(element)
+    );
   }
 
   function findVisibleCouponButtons() {

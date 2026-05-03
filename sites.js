@@ -46,9 +46,9 @@
     {
       id: "amex",
       displayName: "Amex",
-      startUrl: "https://global.americanexpress.com/dashboard",
+      startUrl: "https://global.americanexpress.com/offers/eligible",
       hosts: ["global.americanexpress.com"],
-      couponPathPattern: /^\/dashboard\/?$/i,
+      couponPathPattern: /^\/(?:dashboard|offers(?:\/.*)?)\/?$/i,
       popup: {
         openLabel: "Open Offers",
         startLabel: "Start",
@@ -64,10 +64,15 @@
           /^add to card\b/i,
           /\badd to card\b/i,
         ],
+        cardScopedClipPatterns: [
+          /^\+$/,
+          /\badd offer\b/i,
+        ],
         excludedPatterns: [
           /\badded\b/i,
           /\badded to card\b/i,
           /\brefer now\b/i,
+          /\bview details\b/i,
           /\bview offer\b/i,
           /\blearn more\b/i,
           /\bexplore now\b/i,
@@ -81,6 +86,9 @@
           /\badded\b/i,
           /\badded to card\b/i,
           /\boffer added\b/i,
+        ],
+        requiredCardPatterns: [
+          /\bview details\b/i,
         ],
       },
     },
