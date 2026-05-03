@@ -27,6 +27,8 @@
   const CARD_SELECTOR = contentConfig.cardSelector;
   const CLIPPED_STATE_PATTERNS = contentConfig.clippedStatePatterns;
   const REQUIRED_CARD_PATTERNS = contentConfig.requiredCardPatterns || [];
+  const EXPAND_CARD_TO_REQUIRED_TEXT =
+    contentConfig.expandCardToRequiredText || false;
 
   let activeRun = null;
   let clickedSignatures = new Set();
@@ -148,7 +150,25 @@
   }
 
   function getCouponCard(element) {
-    return element.closest(CARD_SELECTOR);
+    const card = element.closest(CARD_SELECTOR);
+
+    if (!card || !EXPAND_CARD_TO_REQUIRED_TEXT) {
+      return card;
+    }
+
+    let current = card;
+
+    while (current && current !== document.body) {
+      const label = getElementLabel(current);
+
+      if (REQUIRED_CARD_PATTERNS.every((pattern) => pattern.test(label))) {
+        return current;
+      }
+
+      current = current.parentElement;
+    }
+
+    return card;
   }
 
   function isInsideClippedCouponCard(element) {
