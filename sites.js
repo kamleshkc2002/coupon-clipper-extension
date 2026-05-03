@@ -81,15 +81,17 @@
           /\bfrequently asked questions\b/i,
         ],
         cardSelector:
-          "article, li, [role='listitem'], [class*='offer' i], [data-testid*='offer' i], [data-test-id*='offer' i]",
+          "article, li, [role='listitem'], [class*='offer' i], [data-testid*='offer' i], [data-test-id*='offer' i], div",
         clippedStatePatterns: [
           /\badded\b/i,
           /\badded to card\b/i,
           /\boffer added\b/i,
+          /✓/,
         ],
         requiredCardPatterns: [
           /\bview details\b/i,
         ],
+        expandCardToRequiredText: true,
       },
     },
   ];
