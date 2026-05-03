@@ -1,0 +1,32 @@
+name: Build extensions
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build browser extension packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Chrome extension
+        run: ./scripts/build-chrome-extension.sh
+
+      - name: Build Firefox add-on
+        run: ./scripts/build-firefox-addon.sh
+
+      - name: Upload extension packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-packages
+          path: |
+            dist/coupon-clipper-extension-chrome.zip
+            dist/coupon-clipper-extension-firefox.zip
+          if-no-files-found: error

@@ -56,6 +56,28 @@ dist/coupon-clipper-extension-firefox.zip
 Submit that ZIP to Mozilla Add-ons for signing before distributing it to other
 Firefox users.
 
+## Automated builds
+
+GitHub Actions builds Chrome and Firefox packages on every push, pull request,
+and manual workflow run. These builds appear on the workflow run as downloadable
+artifacts, not as GitHub Releases.
+
+The generated artifacts are:
+
+```text
+coupon-clipper-extension-chrome.zip
+coupon-clipper-extension-firefox.zip
+```
+
+To create a GitHub Release, push a version tag:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow builds both packages and attaches them to the release.
+
 ## Repository
 
 Intended GitHub remote:

@@ -1,0 +1,43 @@
+name: Release extensions
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release, for example v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      - name: Build Chrome extension
+        run: ./scripts/build-chrome-extension.sh
+
+      - name: Build Firefox add-on
+        run: ./scripts/build-firefox-addon.sh
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          gh release create "$TAG_NAME" \
+            dist/coupon-clipper-extension-chrome.zip \
+            dist/coupon-clipper-extension-firefox.zip \
+            --title "$TAG_NAME" \
+            --generate-notes
