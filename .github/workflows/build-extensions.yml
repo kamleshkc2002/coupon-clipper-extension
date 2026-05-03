@@ -16,6 +16,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Run Amex detection smoke test
+        run: node scripts/smoke-amex-detection.mjs
+
       - name: Build Chrome extension
         run: ./scripts/build-chrome-extension.sh
 

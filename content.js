@@ -29,6 +29,13 @@
   const REQUIRED_CARD_PATTERNS = contentConfig.requiredCardPatterns || [];
   const EXPAND_CARD_TO_REQUIRED_TEXT =
     contentConfig.expandCardToRequiredText || false;
+  const ICON_ONLY_CLIP_BUTTONS = contentConfig.iconOnlyClipButtons || false;
+  const ICON_BUTTON_MIN_SIZE = contentConfig.iconButtonMinSize || 24;
+  const ICON_BUTTON_MAX_SIZE = contentConfig.iconButtonMaxSize || 96;
+  const ICON_BUTTON_MIN_CARD_X_RATIO =
+    contentConfig.iconButtonMinCardXRatio || 0.72;
+  const CLIPPED_CONTROL_PATTERNS =
+    contentConfig.clippedControlPatterns || [];
 
   let activeRun = null;
   let clickedSignatures = new Set();
@@ -39,17 +46,52 @@
     });
   }
 
-  function getElementLabel(element) {
+  function getClassLabel(element) {
+    if (typeof element.className === "string") {
+      return element.className;
+    }
+
+    if (typeof element.className?.baseVal === "string") {
+      return element.className.baseVal;
+    }
+
+    return "";
+  }
+
+  function getOwnLabelParts(element) {
     return [
       element.textContent,
       element.getAttribute("aria-label"),
       element.getAttribute("title"),
+      element.getAttribute("alt"),
       element.getAttribute("value"),
       element.getAttribute("data-testid"),
       element.getAttribute("data-test-id"),
+      element.getAttribute("data-icon"),
+      element.getAttribute("href"),
+      element.getAttribute("xlink:href"),
       element.id,
-      typeof element.className === "string" ? element.className : "",
-    ]
+      getClassLabel(element),
+    ];
+  }
+
+  function getDescendantLabelParts(element) {
+    if (!element.querySelectorAll) {
+      return [];
+    }
+
+    return Array.from(
+      element.querySelectorAll(
+        "[aria-label], [title], [alt], [data-testid], [data-test-id], [data-icon], svg, use"
+      )
+    )
+      .slice(0, 40)
+      .flatMap((descendant) => getOwnLabelParts(descendant));
+  }
+
+  function getElementLabel(element) {
+    return getOwnLabelParts(element)
+      .concat(getDescendantLabelParts(element))
       .filter(Boolean)
       .join(" ")
       .replace(/\s+/g, " ")
@@ -171,6 +213,83 @@
     return card;
   }
 
+  function parseRgbColor(value) {
+    if (!value || value === "transparent") {
+      return null;
+    }
+
+    const match = value.match(
+      /rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)(?:\s*,\s*(\d+(?:\.\d+)?))?\s*\)/i
+    );
+
+    if (!match) {
+      return null;
+    }
+
+    const alpha = match[4] === undefined ? 1 : Number(match[4]);
+
+    if (alpha === 0) {
+      return null;
+    }
+
+    return {
+      r: Number(match[1]),
+      g: Number(match[2]),
+      b: Number(match[3]),
+    };
+  }
+
+  function getColorSamples(element) {
+    const nodes = [element];
+
+    if (element.querySelectorAll) {
+      nodes.push(
+        ...Array.from(
+          element.querySelectorAll("svg, path, circle, rect, line, polyline, use")
+        ).slice(0, 20)
+      );
+    }
+
+    return nodes.flatMap((node) => {
+      const style = window.getComputedStyle(node);
+
+      return [
+        style.backgroundColor,
+        style.color,
+        style.borderColor,
+        style.fill,
+        style.stroke,
+      ]
+        .map(parseRgbColor)
+        .filter(Boolean);
+    });
+  }
+
+  function isBlueishColor(color) {
+    return color.b >= 120 && color.b > color.r + 45 && color.b >= color.g;
+  }
+
+  function isGreenishColor(color) {
+    return color.g >= 90 && color.g > color.r + 25 && color.g > color.b + 10;
+  }
+
+  function hasBlueishStyle(element) {
+    return getColorSamples(element).some(isBlueishColor);
+  }
+
+  function hasGreenishStyle(element) {
+    return getColorSamples(element).some(isGreenishColor);
+  }
+
+  function looksLikeClippedControl(element) {
+    const label = getElementLabel(element);
+
+    return (
+      CLIPPED_CONTROL_PATTERNS.some((pattern) => pattern.test(label)) ||
+      hasGreenishStyle(element)
+    );
+  }
+
   function isInsideClippedCouponCard(element) {
     const card = getCouponCard(element);
 
@@ -199,14 +318,49 @@
     return REQUIRED_CARD_PATTERNS.every((pattern) => pattern.test(cardLabel));
   }
 
-  function looksLikeClipAction(element) {
-    const label = getElementLabel(element);
+  function isSquareishIconButton(element) {
+    const rect = element.getBoundingClientRect();
+    const largestSide = Math.max(rect.width, rect.height);
+    const smallestSide = Math.min(rect.width, rect.height);
 
-    if (!label) {
+    return (
+      smallestSide >= ICON_BUTTON_MIN_SIZE &&
+      largestSide <= ICON_BUTTON_MAX_SIZE &&
+      largestSide / smallestSide <= 1.5
+    );
+  }
+
+  function isInCardActionArea(element) {
+    const card = getCouponCard(element);
+
+    if (!card) {
       return false;
     }
 
-    if (EXCLUDED_PATTERNS.some((pattern) => pattern.test(label))) {
+    const rect = element.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const elementCenterX = rect.left + rect.width / 2;
+    const actionAreaStart =
+      cardRect.left + cardRect.width * ICON_BUTTON_MIN_CARD_X_RATIO;
+
+    return elementCenterX >= actionAreaStart;
+  }
+
+  function looksLikeIconOnlyClipAction(element) {
+    return (
+      ICON_ONLY_CLIP_BUTTONS &&
+      isInsideRequiredCouponCard(element) &&
+      isSquareishIconButton(element) &&
+      isInCardActionArea(element) &&
+      hasBlueishStyle(element) &&
+      !looksLikeClippedControl(element)
+    );
+  }
+
+  function looksLikeClipAction(element) {
+    const label = getElementLabel(element);
+
+    if (label && EXCLUDED_PATTERNS.some((pattern) => pattern.test(label))) {
       return false;
     }
 
@@ -215,8 +369,9 @@
     }
 
     return (
-      CARD_SCOPED_CLIP_PATTERNS.some((pattern) => pattern.test(label)) &&
-      isInsideRequiredCouponCard(element)
+      (CARD_SCOPED_CLIP_PATTERNS.some((pattern) => pattern.test(label)) &&
+        isInsideRequiredCouponCard(element)) ||
+      looksLikeIconOnlyClipAction(element)
     );
   }
 
@@ -228,6 +383,7 @@
           isVisible(element) &&
           isInViewport(element) &&
           looksLikeClipAction(element) &&
+          !looksLikeClippedControl(element) &&
           !isInsideClippedCouponCard(element) &&
           !clickedSignatures.has(getElementSignature(element))
         );

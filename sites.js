@@ -88,10 +88,20 @@
           /\boffer added\b/i,
           /✓/,
         ],
+        clippedControlPatterns: [
+          /\bcheck(?:mark)?\b/i,
+          /\bsuccess\b/i,
+          /\bcomplete(?:d)?\b/i,
+          /✓/,
+        ],
         requiredCardPatterns: [
           /\bview details\b/i,
         ],
         expandCardToRequiredText: true,
+        iconOnlyClipButtons: true,
+        iconButtonMinSize: 28,
+        iconButtonMaxSize: 88,
+        iconButtonMinCardXRatio: 0.72,
       },
     },
   ];
