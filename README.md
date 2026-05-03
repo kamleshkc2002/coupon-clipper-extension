@@ -71,7 +71,7 @@ Firefox users.
 
 GitHub Actions builds Chrome and Firefox packages on every push, pull request,
 and manual workflow run. These builds appear on the workflow run as downloadable
-artifacts, not as GitHub Releases.
+artifacts.
 
 The generated artifacts are:
 
@@ -88,11 +88,3 @@ git push origin v0.1.0
 ```
 
 The release workflow builds both packages and attaches them to the release.
-
-## Repository
-
-Intended GitHub remote:
-
-```text
-https://github.com/kamleshkc2002/coupon-clipper-extension
-```
