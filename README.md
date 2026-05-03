@@ -28,6 +28,13 @@ like coupon clipping actions, including BJ's `+ Clip to Card` buttons.
 If the popup is opened on another BJ's page, the button opens
 `https://www.bjs.com/myCoupons`. On non-BJ's pages, the button is disabled.
 
+## Supported Sites
+
+- BJ's coupons: `https://www.bjs.com/myCoupons`
+
+See [Adding Supported Sites](docs/adding-sites.md) for the checklist used to add
+future sites such as Amex Offers.
+
 ## Chrome local development
 
 1. Open Chrome and go to `chrome://extensions`.
