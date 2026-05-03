@@ -17,17 +17,49 @@ BJ's Wholesale Club or any other retailer.
 
 Experimental personal project.
 
-## Local development
+## Chrome local development
 
 1. Open Chrome and go to `chrome://extensions`.
 2. Enable **Developer mode**.
 3. Click **Load unpacked**.
 4. Select this repository folder.
 
+## Firefox local development
+
+Firefox uses `manifest.firefox.json`, which adds Firefox-specific add-on metadata.
+Build the Firefox development folder first:
+
+```sh
+./scripts/build-firefox-addon.sh
+```
+
+Then load it in Firefox:
+
+1. Open Firefox and go to `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on...**.
+3. Select `dist/firefox-addon/manifest.json`.
+
+## Firefox add-on package
+
+Create the package with:
+
+```sh
+./scripts/build-firefox-addon.sh
+```
+
+The generated file is:
+
+```text
+dist/coupon-clipper-extension-firefox.zip
+```
+
+Submit that ZIP to Mozilla Add-ons for signing before distributing it to other
+Firefox users.
+
 ## Repository
 
 Intended GitHub remote:
 
 ```text
-git@github.com:kamleshkc2002/coupon-clipper-extension.git
+https://github.com/kamleshkc2002/coupon-clipper-extension
 ```
