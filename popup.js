@@ -1,8 +1,8 @@
 const startButton = document.getElementById("start");
 const statusElement = document.getElementById("status");
 
-const BJS_COUPONS_URL = "https://www.bjs.com/myCoupons";
 const START_MESSAGE = "couponClipper:start";
+const siteRegistry = globalThis.CouponClipperSites;
 
 function setStatus(message) {
   if (statusElement) {
@@ -71,7 +71,7 @@ function executeContentScript(tabId) {
   if (globalThis.browser?.scripting?.executeScript) {
     return globalThis.browser.scripting.executeScript({
       target: { tabId },
-      files: ["content.js"],
+      files: ["sites.js", "content.js"],
     });
   }
 
@@ -79,7 +79,7 @@ function executeContentScript(tabId) {
     chrome.scripting.executeScript(
       {
         target: { tabId },
-        files: ["content.js"],
+        files: ["sites.js", "content.js"],
       },
       (result) => {
         const error = chrome.runtime.lastError;
@@ -97,35 +97,6 @@ function executeContentScript(tabId) {
 
 function isMissingContentScriptError(error) {
   return error.message.includes("Receiving end does not exist");
-}
-
-function parseUrl(url) {
-  try {
-    return new URL(url);
-  } catch {
-    return null;
-  }
-}
-
-function isBjsPage(url) {
-  const parsedUrl = parseUrl(url);
-
-  return (
-    parsedUrl?.protocol === "https:" && parsedUrl.hostname === "www.bjs.com"
-  );
-}
-
-function isBjsCouponsPage(url) {
-  const parsedUrl = parseUrl(url);
-
-  if (!parsedUrl) {
-    return false;
-  }
-
-  return (
-    isBjsPage(url) &&
-    parsedUrl.pathname.replace(/\/+$/, "").toLowerCase() === "/mycoupons"
-  );
 }
 
 function setStartButton({ disabled, label }) {
@@ -148,20 +119,21 @@ async function getActiveTab() {
 async function refreshPopupState() {
   try {
     const tab = await getActiveTab();
+    const site = siteRegistry.findSiteByUrl(tab?.url);
 
-    if (!tab?.id || !isBjsPage(tab.url)) {
+    if (!tab?.id || !site) {
       setStartButton({ disabled: true, label: "Start" });
-      setStatus("Open a BJ's page to start.");
+      setStatus("Open a supported coupon site to start.");
       return;
     }
 
-    if (!isBjsCouponsPage(tab.url)) {
-      setStartButton({ disabled: false, label: "Open Coupons" });
-      setStatus("Click to open BJ's coupons.");
+    if (!siteRegistry.isCouponPage(site, tab.url)) {
+      setStartButton({ disabled: false, label: site.popup.openLabel });
+      setStatus(`Click to open ${site.displayName} coupons.`);
       return;
     }
 
-    setStartButton({ disabled: false, label: "Start" });
+    setStartButton({ disabled: false, label: site.popup.startLabel });
     setStatus("Ready.");
   } catch (error) {
     setStartButton({ disabled: true, label: "Start" });
@@ -195,15 +167,16 @@ async function startClipping() {
 
   try {
     const tab = await getActiveTab();
+    const site = siteRegistry.findSiteByUrl(tab?.url);
 
-    if (!tab?.id || !isBjsPage(tab.url)) {
-      setStatus("Open a BJ's page to start.");
+    if (!tab?.id || !site) {
+      setStatus("Open a supported coupon site to start.");
       return;
     }
 
-    if (!isBjsCouponsPage(tab.url)) {
-      setStatus("Opening BJ's coupons...");
-      await updateTab(tab.id, { url: BJS_COUPONS_URL });
+    if (!siteRegistry.isCouponPage(site, tab.url)) {
+      setStatus(`Opening ${site.displayName} coupons...`);
+      await updateTab(tab.id, { url: site.startUrl });
       return;
     }
 

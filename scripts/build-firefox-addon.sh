@@ -13,6 +13,7 @@ cp "$ROOT_DIR/content.js" "$BUILD_DIR/content.js"
 cp "$ROOT_DIR/popup.css" "$BUILD_DIR/popup.css"
 cp "$ROOT_DIR/popup.html" "$BUILD_DIR/popup.html"
 cp "$ROOT_DIR/popup.js" "$BUILD_DIR/popup.js"
+cp "$ROOT_DIR/sites.js" "$BUILD_DIR/sites.js"
 cp "$ROOT_DIR/LICENSE" "$BUILD_DIR/LICENSE"
 cp -R "$ROOT_DIR/icons" "$BUILD_DIR/icons"
 
