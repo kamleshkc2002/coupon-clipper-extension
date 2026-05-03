@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Coupon Clipper">
+  <rect width="128" height="128" rx="22" fill="#2f7d20"/>
+  <path d="M19 24h90a8 8 0 0 1 8 8v64a8 8 0 0 1-8 8H19a8 8 0 0 1-8-8V78a14 14 0 0 0 0-28V32a8 8 0 0 1 8-8Z" fill="#fff"/>
+  <path d="M30 47h68M30 64h68M30 81h48" stroke="#2f7d20" stroke-width="8" stroke-linecap="round"/>
+  <text x="64" y="116" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" text-anchor="middle">Coupon Clipper</text>
+</svg>

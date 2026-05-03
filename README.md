@@ -25,6 +25,9 @@ Experimental personal project.
 The extension scans down the page and clicks visible enabled controls that look
 like coupon clipping actions, including BJ's `+ Clip to Card` buttons.
 
+If the popup is opened on another BJ's page, the button opens
+`https://www.bjs.com/myCoupons`. On non-BJ's pages, the button is disabled.
+
 ## Chrome local development
 
 1. Open Chrome and go to `chrome://extensions`.
