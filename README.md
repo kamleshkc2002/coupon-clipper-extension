@@ -17,6 +17,15 @@ BJ's Wholesale Club or any other retailer.
 
 Experimental personal project.
 
+## Usage
+
+1. Open a supported BJ's coupon page.
+2. Scroll the coupon buttons you want to clip into view.
+3. Open the extension popup and click **Start**.
+
+The extension only clicks visible enabled controls that look like coupon clipping
+actions, including BJ's `+ Clip to Card` buttons.
+
 ## Chrome local development
 
 1. Open Chrome and go to `chrome://extensions`.

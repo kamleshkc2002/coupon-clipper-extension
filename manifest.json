@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Coupon Clipper Extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Personal helper for clipping visible digital coupons.",
-  "permissions": ["storage"],
+  "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["https://www.bjs.com/*"],
   "content_scripts": [
     {
