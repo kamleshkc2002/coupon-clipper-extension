@@ -7,6 +7,9 @@
 
   const START_MESSAGE = "couponClipper:start";
   const CLICK_DELAY_MS = 1200;
+  const SCROLL_DELAY_MS = 1400;
+  const MAX_SCAN_PASSES = 80;
+  const MAX_NO_PROGRESS_PASSES = 4;
   const CONTROL_SELECTOR =
     "button, [role='button'], a[href], input[type='button'], input[type='submit']";
   const CLIP_PATTERNS = [
@@ -26,8 +29,16 @@
     /\blearn more\b/i,
     /\bview\b/i,
   ];
+  const CARD_SELECTOR =
+    "article, li, section, [class*='coupon' i], [data-testid*='coupon' i], [data-test-id*='coupon' i]";
+  const CLIPPED_STATE_PATTERNS = [
+    /✓\s*clipped\b/i,
+    /\bclipped\b/i,
+    /\balready clipped\b/i,
+  ];
 
   let activeRun = null;
+  let clickedSignatures = new Set();
 
   function delay(ms) {
     return new Promise((resolve) => {
@@ -92,6 +103,59 @@
     );
   }
 
+  function getScrollTop() {
+    return (
+      window.scrollY ||
+      document.documentElement.scrollTop ||
+      document.body.scrollTop ||
+      0
+    );
+  }
+
+  function getDocumentHeight() {
+    return Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight
+    );
+  }
+
+  function getViewportHeight() {
+    return window.innerHeight || document.documentElement.clientHeight;
+  }
+
+  function isNearPageBottom() {
+    return getScrollTop() + getViewportHeight() >= getDocumentHeight() - 8;
+  }
+
+  function scrollToNextViewport() {
+    const previousScrollTop = getScrollTop();
+    const scrollDistance = Math.max(Math.floor(getViewportHeight() * 0.85), 320);
+
+    window.scrollBy({
+      top: scrollDistance,
+      left: 0,
+      behavior: "smooth",
+    });
+
+    return previousScrollTop;
+  }
+
+  function getElementSignature(element) {
+    const rect = element.getBoundingClientRect();
+    const documentTop = Math.round(rect.top + getScrollTop());
+    const documentLeft = Math.round(rect.left + window.scrollX);
+
+    return [
+      getElementLabel(element).toLowerCase(),
+      documentTop,
+      documentLeft,
+      Math.round(rect.width),
+      Math.round(rect.height),
+    ].join("|");
+  }
+
   function looksLikeClipAction(element) {
     const label = getElementLabel(element);
 
@@ -106,6 +170,22 @@
     return CLIP_PATTERNS.some((pattern) => pattern.test(label));
   }
 
+  function getCouponCard(element) {
+    return element.closest(CARD_SELECTOR);
+  }
+
+  function isInsideClippedCouponCard(element) {
+    const card = getCouponCard(element);
+
+    if (!card) {
+      return false;
+    }
+
+    const cardLabel = getElementLabel(card);
+
+    return CLIPPED_STATE_PATTERNS.some((pattern) => pattern.test(cardLabel));
+  }
+
   function findVisibleCouponButtons() {
     return Array.from(document.querySelectorAll(CONTROL_SELECTOR)).filter(
       (element) => {
@@ -113,13 +193,15 @@
           !isDisabled(element) &&
           isVisible(element) &&
           isInViewport(element) &&
-          looksLikeClipAction(element)
+          looksLikeClipAction(element) &&
+          !isInsideClippedCouponCard(element) &&
+          !clickedSignatures.has(getElementSignature(element))
         );
       }
     );
   }
 
-  async function clickCouponButtons() {
+  async function clickVisibleCouponButtons() {
     const buttons = findVisibleCouponButtons();
     let clickedCount = 0;
     let failedCount = 0;
@@ -130,6 +212,7 @@
       }
 
       try {
+        clickedSignatures.add(getElementSignature(button));
         button.click();
         clickedCount += 1;
       } catch (error) {
@@ -143,6 +226,55 @@
     return {
       clickedCount,
       failedCount,
+    };
+  }
+
+  async function clickCouponButtons() {
+    const startingScrollTop = getScrollTop();
+    let clickedCount = 0;
+    let failedCount = 0;
+    let scannedPasses = 0;
+    let noProgressPasses = 0;
+
+    clickedSignatures = new Set();
+
+    while (scannedPasses < MAX_SCAN_PASSES) {
+      const beforeScrollTop = getScrollTop();
+      const result = await clickVisibleCouponButtons();
+
+      scannedPasses += 1;
+      clickedCount += result.clickedCount;
+      failedCount += result.failedCount;
+
+      if (result.clickedCount > 0) {
+        noProgressPasses = 0;
+      } else {
+        noProgressPasses += 1;
+      }
+
+      if (isNearPageBottom() && noProgressPasses >= 1) {
+        break;
+      }
+
+      if (noProgressPasses >= MAX_NO_PROGRESS_PASSES) {
+        break;
+      }
+
+      scrollToNextViewport();
+      await delay(SCROLL_DELAY_MS);
+
+      if (Math.abs(getScrollTop() - beforeScrollTop) < 4 && isNearPageBottom()) {
+        break;
+      }
+    }
+
+    return {
+      clickedCount,
+      failedCount,
+      scannedPasses,
+      reachedBottom: isNearPageBottom(),
+      startingScrollTop,
+      endingScrollTop: getScrollTop(),
     };
   }
 

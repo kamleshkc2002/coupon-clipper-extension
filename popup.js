@@ -82,7 +82,9 @@ function isMissingContentScriptError(error) {
 
 function buildStatusMessage(result) {
   if (result.clickedCount === 0) {
-    return "No visible coupon buttons found.";
+    return result.reachedBottom
+      ? "No coupon buttons found after scanning the page."
+      : "No visible coupon buttons found.";
   }
 
   if (result.failedCount > 0) {
@@ -91,7 +93,7 @@ function buildStatusMessage(result) {
 
   return `Clicked ${result.clickedCount} coupon button${
     result.clickedCount === 1 ? "" : "s"
-  }.`;
+  } while scanning the page.`;
 }
 
 async function startClipping() {
@@ -100,7 +102,7 @@ async function startClipping() {
   }
 
   startButton.disabled = true;
-  setStatus("Looking for visible coupons...");
+  setStatus("Scanning coupon page...");
 
   try {
     const [tab] = await queryActiveTab();
