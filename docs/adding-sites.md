@@ -84,13 +84,15 @@ Then load the unpacked extension from `dist/chrome-extension` or
 
 ## Amex Notes
 
-For Amex Offers, start by documenting:
+Amex Offers are configured for:
 
-- the exact offers page URL after login
-- the hostname that serves the page
-- the unadded offer button text
-- the added offer state text
-- whether offers appear only after scrolling or behind tabs/filters
+- URL: `https://global.americanexpress.com/dashboard`
+- Host: `global.americanexpress.com`
+- Action button: `Add to Card`
+- Ignored buttons: `Refer Now`, `View Offer`, `Learn More`, `Explore Now`,
+  and `View All`
+- The offers list may appear near the bottom of the dashboard, so the scanner
+  scrolls through the page.
 
 Do not store credentials, account data, offer details, or card data in the
 extension.

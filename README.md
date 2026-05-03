@@ -1,7 +1,7 @@
 # Coupon Clipper Extension
 
-A personal browser extension to help clip visible digital coupons from a membership
-coupon page.
+A personal browser extension to help clip visible digital coupons and card-linked
+offers.
 
 This project is personal and is not affiliated with, endorsed by, or sponsored by
 BJ's Wholesale Club or any other retailer.
@@ -19,21 +19,24 @@ Experimental personal project.
 
 ## Usage
 
-1. Open a supported BJ's coupon page.
+1. Open a supported coupon or offers page.
 2. Open the extension popup and click **Start**.
 
 The extension scans down the page and clicks visible enabled controls that look
-like coupon clipping actions, including BJ's `+ Clip to Card` buttons.
+like coupon clipping actions, including BJ's `+ Clip to Card` buttons and Amex
+`Add to Card` buttons.
 
-If the popup is opened on another BJ's page, the button opens
-`https://www.bjs.com/myCoupons`. On non-BJ's pages, the button is disabled.
+If the popup is opened on another supported site page, the button opens that
+site's configured coupons or offers page. On unsupported pages, the button is
+disabled.
 
 ## Supported Sites
 
 - BJ's coupons: `https://www.bjs.com/myCoupons`
+- Amex Offers: `https://global.americanexpress.com/dashboard`
 
 See [Adding Supported Sites](docs/adding-sites.md) for the checklist used to add
-future sites such as Amex Offers.
+future sites.
 
 ## Chrome local development
 
