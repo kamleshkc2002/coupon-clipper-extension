@@ -3,39 +3,27 @@
     return;
   }
 
+  const site = globalThis.CouponClipperSites?.findSiteByUrl(
+    window.location.href
+  );
+  const contentConfig = site?.content;
+
+  if (!contentConfig) {
+    return;
+  }
+
   globalThis.__couponClipperContentScriptLoaded = true;
 
   const START_MESSAGE = "couponClipper:start";
-  const CLICK_DELAY_MS = 1200;
-  const SCROLL_DELAY_MS = 1400;
-  const MAX_SCAN_PASSES = 80;
-  const MAX_NO_PROGRESS_PASSES = 4;
-  const CONTROL_SELECTOR =
-    "button, [role='button'], a[href], input[type='button'], input[type='submit']";
-  const CLIP_PATTERNS = [
-    /\+?\s*clip to card\b/i,
-    /\bclip\b/i,
-    /\bclip coupon\b/i,
-    /\badd coupon\b/i,
-    /\badd to card\b/i,
-    /\bactivate coupon\b/i,
-    /\bload to card\b/i,
-  ];
-  const EXCLUDED_PATTERNS = [
-    /\bclipped\b/i,
-    /\bunclip\b/i,
-    /\bremove\b/i,
-    /\bdetails?\b/i,
-    /\blearn more\b/i,
-    /\bview\b/i,
-  ];
-  const CARD_SELECTOR =
-    "article, li, section, [class*='coupon' i], [data-testid*='coupon' i], [data-test-id*='coupon' i]";
-  const CLIPPED_STATE_PATTERNS = [
-    /✓\s*clipped\b/i,
-    /\bclipped\b/i,
-    /\balready clipped\b/i,
-  ];
+  const CLICK_DELAY_MS = contentConfig.clickDelayMs;
+  const SCROLL_DELAY_MS = contentConfig.scrollDelayMs;
+  const MAX_SCAN_PASSES = contentConfig.maxScanPasses;
+  const MAX_NO_PROGRESS_PASSES = contentConfig.maxNoProgressPasses;
+  const CONTROL_SELECTOR = contentConfig.controlSelector;
+  const CLIP_PATTERNS = contentConfig.clipPatterns;
+  const EXCLUDED_PATTERNS = contentConfig.excludedPatterns;
+  const CARD_SELECTOR = contentConfig.cardSelector;
+  const CLIPPED_STATE_PATTERNS = contentConfig.clippedStatePatterns;
 
   let activeRun = null;
   let clickedSignatures = new Set();

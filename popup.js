@@ -71,7 +71,7 @@ function executeContentScript(tabId) {
   if (globalThis.browser?.scripting?.executeScript) {
     return globalThis.browser.scripting.executeScript({
       target: { tabId },
-      files: ["content.js"],
+      files: ["sites.js", "content.js"],
     });
   }
 
@@ -79,7 +79,7 @@ function executeContentScript(tabId) {
     chrome.scripting.executeScript(
       {
         target: { tabId },
-        files: ["content.js"],
+        files: ["sites.js", "content.js"],
       },
       (result) => {
         const error = chrome.runtime.lastError;

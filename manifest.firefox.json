@@ -23,7 +23,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.bjs.com/*"],
-      "js": ["content.js"],
+      "js": ["sites.js", "content.js"],
       "run_at": "document_idle"
     }
   ],
