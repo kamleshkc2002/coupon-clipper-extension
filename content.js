@@ -39,6 +39,10 @@
 
   let activeRun = null;
   let clickedSignatures = new Set();
+  let shouldStop = false;
+  let currentClickedCount = 0;
+  let currentFailedCount = 0;
+  let currentScannedPasses = 0;
 
   function delay(ms) {
     return new Promise((resolve) => {
@@ -426,9 +430,31 @@
     let scannedPasses = 0;
     let noProgressPasses = 0;
 
+    currentClickedCount = 0;
+    currentFailedCount = 0;
+    currentScannedPasses = 0;
+
     clickedSignatures = new Set();
+    shouldStop = false;
+
+    // Send initial status update to popup
+    try {
+      chrome.runtime.sendMessage({
+        type: "couponClipper:progress",
+        clickedCount,
+        failedCount,
+        scannedPasses,
+        status: "started"
+      });
+    } catch (e) {
+      // Popup might be closed
+    }
 
     while (scannedPasses < MAX_SCAN_PASSES) {
+      if (shouldStop) {
+        break;
+      }
+
       const beforeScrollTop = getScrollTop();
       const result = await clickVisibleCouponButtons();
 
@@ -436,10 +462,27 @@
       clickedCount += result.clickedCount;
       failedCount += result.failedCount;
 
+      currentClickedCount = clickedCount;
+      currentFailedCount = failedCount;
+      currentScannedPasses = scannedPasses;
+
       if (result.clickedCount > 0) {
         noProgressPasses = 0;
       } else {
         noProgressPasses += 1;
+      }
+
+      // Send progress update to popup
+      try {
+        chrome.runtime.sendMessage({
+          type: "couponClipper:progress",
+          clickedCount,
+          failedCount,
+          scannedPasses,
+          status: "clipping"
+        });
+      } catch (e) {
+        // Popup might be closed
       }
 
       if (isNearPageBottom() && noProgressPasses >= 1) {
@@ -458,6 +501,19 @@
       }
     }
 
+    // Send final completed status
+    try {
+      chrome.runtime.sendMessage({
+        type: "couponClipper:progress",
+        clickedCount,
+        failedCount,
+        scannedPasses,
+        status: shouldStop ? "stopped" : "completed"
+      });
+    } catch (e) {
+      // Popup might be closed
+    }
+
     return {
       clickedCount,
       failedCount,
@@ -465,6 +521,7 @@
       reachedBottom: isNearPageBottom(),
       startingScrollTop,
       endingScrollTop: getScrollTop(),
+      stopped: shouldStop
     };
   }
 
@@ -496,11 +553,24 @@
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message?.type !== START_MESSAGE) {
-      return false;
+    if (message?.type === START_MESSAGE) {
+      handleStart(sendResponse);
+      return true;
     }
-
-    handleStart(sendResponse);
-    return true;
+    if (message?.type === "couponClipper:stop") {
+      shouldStop = true;
+      sendResponse({ ok: true });
+      return true;
+    }
+    if (message?.type === "couponClipper:status_query") {
+      sendResponse({
+        running: activeRun !== null,
+        clickedCount: currentClickedCount,
+        failedCount: currentFailedCount,
+        scannedPasses: currentScannedPasses
+      });
+      return true;
+    }
+    return false;
   });
 })();
