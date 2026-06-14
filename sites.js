@@ -104,6 +104,36 @@
         iconButtonMinCardXRatio: 0.72,
       },
     },
+    {
+      id: "chase",
+      displayName: "Chase",
+      startUrl: "https://secure.chase.com/web/auth/dashboard#/dashboard/merchantOffers/offer-hub",
+      hosts: ["secure.chase.com"],
+      couponPathPattern: /^\/web\/auth\/dashboard\/?$/i,
+      popup: {
+        openLabel: "Open Offers",
+        startLabel: "Start",
+      },
+      content: {
+        clickDelayMs: 1500,
+        scrollDelayMs: 1600,
+        maxScanPasses: 100,
+        maxNoProgressPasses: 5,
+        controlSelector:
+          "button, [role='button'], a[href], input[type='button'], input[type='submit']",
+        clipPatterns: [
+          // Matches tiles that still have the "add offer" plus-circle SVG
+          // (data-testid="commerce-tile-button" is collected from descendants by getElementLabel)
+          /\bcommerce-tile-button\b/i,
+        ],
+        excludedPatterns: [],
+        cardSelector: ".carouselExploreMoreGridItemContainer",
+        clippedStatePatterns: [],
+        // When clicking a tile navigates to offer detail (hash change),
+        // content.js uses this to detect navigation away and return to hub.
+        hubHash: "/dashboard/merchantOffers/offer-hub",
+      },
+    },
   ];
 
   function parseUrl(url) {
