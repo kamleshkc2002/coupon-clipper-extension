@@ -395,10 +395,11 @@
     );
   }
 
-  async function clickVisibleCouponButtons() {
+  async function clickVisibleCouponButtons(clickDelayMs) {
     const buttons = findVisibleCouponButtons();
     let clickedCount = 0;
     let failedCount = 0;
+    const currentDelay = clickDelayMs !== undefined ? clickDelayMs : CLICK_DELAY_MS;
 
     for (const button of buttons) {
       if (!button.isConnected || isDisabled(button) || !isVisible(button)) {
@@ -414,7 +415,7 @@
         failedCount += 1;
       }
 
-      await delay(CLICK_DELAY_MS);
+      await delay(currentDelay);
     }
 
     return {
@@ -423,12 +424,15 @@
     };
   }
 
-  async function clickCouponButtons() {
+  async function clickCouponButtons(customClickDelay, customScrollDelay) {
     const startingScrollTop = getScrollTop();
     let clickedCount = 0;
     let failedCount = 0;
     let scannedPasses = 0;
     let noProgressPasses = 0;
+
+    const clickDelay = customClickDelay !== undefined ? customClickDelay : CLICK_DELAY_MS;
+    const scrollDelay = customScrollDelay !== undefined ? customScrollDelay : SCROLL_DELAY_MS;
 
     currentClickedCount = 0;
     currentFailedCount = 0;
@@ -456,7 +460,7 @@
       }
 
       const beforeScrollTop = getScrollTop();
-      const result = await clickVisibleCouponButtons();
+      const result = await clickVisibleCouponButtons(clickDelay);
 
       scannedPasses += 1;
       clickedCount += result.clickedCount;
@@ -494,7 +498,7 @@
       }
 
       scrollToNextViewport();
-      await delay(SCROLL_DELAY_MS);
+      await delay(scrollDelay);
 
       if (Math.abs(getScrollTop() - beforeScrollTop) < 4 && isNearPageBottom()) {
         break;
@@ -525,7 +529,7 @@
     };
   }
 
-  function handleStart(sendResponse) {
+  function handleStart(message, sendResponse) {
     if (activeRun) {
       sendResponse({
         ok: false,
@@ -534,7 +538,10 @@
       return;
     }
 
-    activeRun = clickCouponButtons()
+    const customClickDelay = message?.clickDelayMs;
+    const customScrollDelay = message?.scrollDelayMs;
+
+    activeRun = clickCouponButtons(customClickDelay, customScrollDelay)
       .then((result) => {
         sendResponse({
           ok: true,
@@ -554,7 +561,7 @@
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === START_MESSAGE) {
-      handleStart(sendResponse);
+      handleStart(message, sendResponse);
       return true;
     }
     if (message?.type === "couponClipper:stop") {

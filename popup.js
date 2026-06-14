@@ -3,6 +3,7 @@ const stopButton = document.getElementById("stop");
 const statusElement = document.getElementById("status");
 const siteBadge = document.getElementById("site-badge");
 const spinnerElement = document.getElementById("status-spinner");
+const speedButtons = document.querySelectorAll(".speed-btn");
 
 // Stats elements
 const statClippedElement = document.getElementById("stat-clipped");
@@ -13,6 +14,13 @@ const START_MESSAGE = "couponClipper:start";
 const siteRegistry = globalThis.CouponClipperSites;
 
 let isCurrentlyClipping = false;
+let activeSpeed = "normal";
+
+const SPEED_CONFIGS = {
+  safe: { clickDelayMs: 2000, scrollDelayMs: 2200 },
+  normal: { clickDelayMs: 1200, scrollDelayMs: 1400 },
+  fast: { clickDelayMs: 600, scrollDelayMs: 800 }
+};
 
 function setStatus(message) {
   if (statusElement) {
@@ -119,6 +127,11 @@ function isMissingContentScriptError(error) {
 
 function setUiState(state) {
   // state can be: 'unsupported', 'ready', 'open-coupons', 'clipping', 'stopping'
+  const disableSpeed = (state === "clipping" || state === "stopping");
+  speedButtons.forEach(btn => {
+    btn.disabled = disableSpeed;
+  });
+
   switch (state) {
     case "unsupported":
       if (startButton) {
@@ -293,8 +306,15 @@ async function startClipping() {
     updateStats(0, 0, 0);
 
     let result;
+    const config = SPEED_CONFIGS[activeSpeed] || SPEED_CONFIGS.normal;
+    const startPayload = {
+      type: START_MESSAGE,
+      clickDelayMs: config.clickDelayMs,
+      scrollDelayMs: config.scrollDelayMs
+    };
+
     try {
-      result = await sendMessageToTab(tab.id, { type: START_MESSAGE });
+      result = await sendMessageToTab(tab.id, startPayload);
     } catch (error) {
       if (!isMissingContentScriptError(error)) {
         throw error;
@@ -302,7 +322,7 @@ async function startClipping() {
 
       setStatus("Injecting helper scripts...");
       await executeContentScript(tab.id);
-      result = await sendMessageToTab(tab.id, { type: START_MESSAGE });
+      result = await sendMessageToTab(tab.id, startPayload);
     }
 
     if (!result?.ok) {
@@ -353,6 +373,39 @@ chrome.runtime.onMessage.addListener((message) => {
       }
     }
   }
+});
+
+function updateSpeedActiveState(speed) {
+  speedButtons.forEach(btn => {
+    if (btn.dataset.speed === speed) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+}
+
+// Load saved speed
+if (chrome.storage?.local) {
+  chrome.storage.local.get(["clipperSpeed"], (result) => {
+    if (result.clipperSpeed && SPEED_CONFIGS[result.clipperSpeed]) {
+      activeSpeed = result.clipperSpeed;
+      updateSpeedActiveState(activeSpeed);
+    }
+  });
+}
+
+speedButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (isCurrentlyClipping) return;
+    const speed = btn.dataset.speed;
+    activeSpeed = speed;
+    updateSpeedActiveState(speed);
+    
+    if (chrome.storage?.local) {
+      chrome.storage.local.set({ clipperSpeed: speed });
+    }
+  });
 });
 
 startButton?.addEventListener("click", startClipping);
