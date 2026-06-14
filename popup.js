@@ -1,12 +1,38 @@
 const startButton = document.getElementById("start");
+const stopButton = document.getElementById("stop");
 const statusElement = document.getElementById("status");
+const siteBadge = document.getElementById("site-badge");
+const spinnerElement = document.getElementById("status-spinner");
+
+// Stats elements
+const statClippedElement = document.getElementById("stat-clipped");
+const statFailedElement = document.getElementById("stat-failed");
+const statPassesElement = document.getElementById("stat-passes");
 
 const START_MESSAGE = "couponClipper:start";
 const siteRegistry = globalThis.CouponClipperSites;
 
+let isCurrentlyClipping = false;
+
 function setStatus(message) {
   if (statusElement) {
     statusElement.textContent = message;
+  }
+}
+
+function updateStats(clipped = 0, failed = 0, passes = 0) {
+  if (statClippedElement) statClippedElement.textContent = clipped;
+  if (statFailedElement) statFailedElement.textContent = failed;
+  if (statPassesElement) statPassesElement.textContent = passes;
+}
+
+function setSpinner(visible) {
+  if (spinnerElement) {
+    if (visible) {
+      spinnerElement.classList.remove("hidden");
+    } else {
+      spinnerElement.classList.add("hidden");
+    }
   }
 }
 
@@ -18,12 +44,10 @@ function queryActiveTab() {
   return new Promise((resolve, reject) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const error = chrome.runtime.lastError;
-
       if (error) {
         reject(new Error(error.message));
         return;
       }
-
       resolve(tabs);
     });
   });
@@ -37,12 +61,10 @@ function updateTab(tabId, updates) {
   return new Promise((resolve, reject) => {
     chrome.tabs.update(tabId, updates, (tab) => {
       const error = chrome.runtime.lastError;
-
       if (error) {
         reject(new Error(error.message));
         return;
       }
-
       resolve(tab);
     });
   });
@@ -56,12 +78,10 @@ function sendMessageToTab(tabId, message) {
   return new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(tabId, message, (response) => {
       const error = chrome.runtime.lastError;
-
       if (error) {
         reject(new Error(error.message));
         return;
       }
-
       resolve(response);
     });
   });
@@ -83,12 +103,10 @@ function executeContentScript(tabId) {
       },
       (result) => {
         const error = chrome.runtime.lastError;
-
         if (error) {
           reject(new Error(error.message));
           return;
         }
-
         resolve(result);
       }
     );
@@ -99,15 +117,71 @@ function isMissingContentScriptError(error) {
   return error.message.includes("Receiving end does not exist");
 }
 
-function setStartButton({ disabled, label }) {
-  if (!startButton) {
-    return;
-  }
+function setUiState(state) {
+  // state can be: 'unsupported', 'ready', 'open-coupons', 'clipping', 'stopping'
+  switch (state) {
+    case "unsupported":
+      if (startButton) {
+        startButton.disabled = true;
+        startButton.classList.remove("hidden");
+        startButton.textContent = "Start";
+      }
+      if (stopButton) {
+        stopButton.disabled = true;
+        stopButton.classList.add("hidden");
+      }
+      setSpinner(false);
+      break;
 
-  startButton.disabled = disabled;
+    case "ready":
+      isCurrentlyClipping = false;
+      if (startButton) {
+        startButton.disabled = false;
+        startButton.classList.remove("hidden");
+        startButton.textContent = "Start";
+      }
+      if (stopButton) {
+        stopButton.disabled = true;
+        stopButton.classList.add("hidden");
+      }
+      setSpinner(false);
+      break;
 
-  if (label) {
-    startButton.textContent = label;
+    case "open-coupons":
+      isCurrentlyClipping = false;
+      if (startButton) {
+        startButton.disabled = false;
+        startButton.classList.remove("hidden");
+      }
+      if (stopButton) {
+        stopButton.disabled = true;
+        stopButton.classList.add("hidden");
+      }
+      setSpinner(false);
+      break;
+
+    case "clipping":
+      isCurrentlyClipping = true;
+      if (startButton) {
+        startButton.disabled = true;
+        startButton.classList.add("hidden");
+      }
+      if (stopButton) {
+        stopButton.disabled = false;
+        stopButton.classList.remove("hidden");
+      }
+      setSpinner(true);
+      break;
+
+    case "stopping":
+      if (startButton) {
+        startButton.disabled = true;
+      }
+      if (stopButton) {
+        stopButton.disabled = true;
+      }
+      setSpinner(true);
+      break;
   }
 }
 
@@ -116,32 +190,71 @@ async function getActiveTab() {
   return tab;
 }
 
+function updateBadge(site) {
+  if (!siteBadge) return;
+
+  // Clear previous badge classes
+  siteBadge.className = "badge";
+
+  if (!site) {
+    siteBadge.textContent = "Unsupported";
+    siteBadge.classList.add("badge-unsupported");
+  } else {
+    siteBadge.textContent = site.displayName;
+    siteBadge.classList.add(`badge-${site.id}`);
+  }
+}
+
 async function refreshPopupState() {
   try {
     const tab = await getActiveTab();
     const site = siteRegistry.findSiteByUrl(tab?.url);
 
+    updateBadge(site);
+
     if (!tab?.id || !site) {
-      setStartButton({ disabled: true, label: "Start" });
+      setUiState("unsupported");
       setStatus("Open a supported coupon site to start.");
+      updateStats(0, 0, 0);
       return;
     }
 
     if (!siteRegistry.isCouponPage(site, tab.url)) {
-      setStartButton({ disabled: false, label: site.popup.openLabel });
+      setUiState("open-coupons");
+      if (startButton) startButton.textContent = site.popup.openLabel;
       setStatus(`Click to open ${site.displayName} coupons.`);
+      updateStats(0, 0, 0);
       return;
     }
 
-    setStartButton({ disabled: false, label: site.popup.startLabel });
+    // Tab is on a valid coupon page, check if clipper is already running
+    try {
+      const response = await sendMessageToTab(tab.id, { type: "couponClipper:status_query" });
+      if (response && response.running) {
+        setUiState("clipping");
+        setStatus("Clipper is running in this tab...");
+        updateStats(response.clickedCount, response.failedCount, response.scannedPasses);
+        return;
+      }
+    } catch (e) {
+      // Content script may not be loaded yet, which is fine
+    }
+
+    // Default state: ready to start
+    setUiState("ready");
     setStatus("Ready.");
+    updateStats(0, 0, 0);
   } catch (error) {
-    setStartButton({ disabled: true, label: "Start" });
+    setUiState("unsupported");
     setStatus(error.message);
   }
 }
 
 function buildStatusMessage(result) {
+  if (result.stopped) {
+    return `Stopped by user. Clipped ${result.clickedCount} coupon${result.clickedCount === 1 ? "" : "s"}.`;
+  }
+
   if (result.clickedCount === 0) {
     return result.reachedBottom
       ? "No coupon buttons found after scanning the page."
@@ -149,21 +262,16 @@ function buildStatusMessage(result) {
   }
 
   if (result.failedCount > 0) {
-    return `Clicked ${result.clickedCount}; ${result.failedCount} failed.`;
+    return `Completed: Clipped ${result.clickedCount}; ${result.failedCount} failed.`;
   }
 
-  return `Clicked ${result.clickedCount} coupon button${
+  return `Completed: Clipped ${result.clickedCount} coupon${
     result.clickedCount === 1 ? "" : "s"
-  } while scanning the page.`;
+  }.`;
 }
 
 async function startClipping() {
-  if (!startButton) {
-    return;
-  }
-
-  startButton.disabled = true;
-  setStatus("Scanning coupon page...");
+  if (!startButton) return;
 
   try {
     const tab = await getActiveTab();
@@ -180,8 +288,11 @@ async function startClipping() {
       return;
     }
 
-    let result;
+    setUiState("clipping");
+    setStatus("Scanning coupon page...");
+    updateStats(0, 0, 0);
 
+    let result;
     try {
       result = await sendMessageToTab(tab.id, { type: START_MESSAGE });
     } catch (error) {
@@ -189,23 +300,61 @@ async function startClipping() {
         throw error;
       }
 
-      setStatus("Starting on this page...");
+      setStatus("Injecting helper scripts...");
       await executeContentScript(tab.id);
       result = await sendMessageToTab(tab.id, { type: START_MESSAGE });
     }
 
     if (!result?.ok) {
       setStatus(result?.error || "Could not start clipping.");
+      setUiState("ready");
       return;
     }
 
     setStatus(buildStatusMessage(result));
+    setUiState("ready");
   } catch (error) {
     setStatus(error.message);
-  } finally {
-    startButton.disabled = false;
+    setUiState("ready");
   }
 }
 
+async function stopClipping() {
+  if (!stopButton) return;
+
+  setUiState("stopping");
+  setStatus("Stopping clipper...");
+
+  try {
+    const tab = await getActiveTab();
+    if (tab?.id) {
+      await sendMessageToTab(tab.id, { type: "couponClipper:stop" });
+    }
+  } catch (error) {
+    setStatus(`Error stopping: ${error.message}`);
+    setUiState("ready");
+  }
+}
+
+// Listen for progress updates from the content script
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === "couponClipper:progress") {
+    updateStats(message.clickedCount, message.failedCount, message.scannedPasses);
+    
+    if (message.status === "clipping" || message.status === "started") {
+      setUiState("clipping");
+      setStatus(`Clipped ${message.clickedCount} coupons. Scanning page...`);
+    } else if (message.status === "completed" || message.status === "stopped") {
+      setUiState("ready");
+      if (message.status === "completed") {
+        setStatus(`Done! Clipped ${message.clickedCount} coupon${message.clickedCount === 1 ? "" : "s"}.`);
+      } else {
+        setStatus(`Stopped. Clipped ${message.clickedCount} coupon${message.clickedCount === 1 ? "" : "s"}.`);
+      }
+    }
+  }
+});
+
 startButton?.addEventListener("click", startClipping);
+stopButton?.addEventListener("click", stopClipping);
 refreshPopupState();

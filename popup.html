@@ -6,10 +6,44 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <main>
-      <h1>Coupon Clipper</h1>
-      <button id="start" disabled>Start</button>
-      <p id="status">Checking page...</p>
+    <main class="card">
+      <header class="header">
+        <div class="logo-area">
+          <div class="logo-icon">✂️</div>
+          <div class="title-desc">
+            <h1>Coupon Clipper</h1>
+            <span class="version">v0.1.7</span>
+          </div>
+        </div>
+        <div id="site-badge" class="badge badge-unsupported">Checking...</div>
+      </header>
+
+      <div class="status-container">
+        <div id="status-spinner" class="spinner hidden"></div>
+        <p id="status">Checking page status...</p>
+      </div>
+
+      <!-- Stats Grid -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Clipped</span>
+          <span id="stat-clipped" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Failed</span>
+          <span id="stat-failed" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Passes</span>
+          <span id="stat-passes" class="stat-value">0</span>
+        </div>
+      </section>
+
+      <!-- Action Panel -->
+      <footer class="action-panel">
+        <button id="start" class="btn btn-primary" disabled>Start</button>
+        <button id="stop" class="btn btn-danger hidden" disabled>Stop</button>
+      </footer>
     </main>
     <script src="sites.js"></script>
     <script src="popup.js"></script>
