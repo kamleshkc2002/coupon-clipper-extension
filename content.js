@@ -36,6 +36,7 @@
     contentConfig.iconButtonMinCardXRatio || 0.72;
   const CLIPPED_CONTROL_PATTERNS =
     contentConfig.clippedControlPatterns || [];
+  const HUB_HASH = contentConfig.hubHash || null;
 
   let activeRun = null;
   let clickedSignatures = new Set();
@@ -487,6 +488,17 @@
         });
       } catch (e) {
         // Popup might be closed
+      }
+
+      // If this site uses a hub hash and we navigated away (e.g. Chase detail page),
+      // return to the hub and continue scanning remaining tiles.
+      if (HUB_HASH && !window.location.hash.includes(HUB_HASH)) {
+        window.location.hash = HUB_HASH;
+        await delay(scrollDelay * 3);
+        window.scrollTo({ top: 0, behavior: "instant" });
+        await delay(scrollDelay);
+        noProgressPasses = 0;
+        continue;
       }
 
       if (isNearPageBottom() && noProgressPasses >= 1) {

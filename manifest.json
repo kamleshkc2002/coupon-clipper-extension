@@ -6,7 +6,8 @@
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://www.bjs.com/*",
-    "https://global.americanexpress.com/*"
+    "https://global.americanexpress.com/*",
+    "https://secure.chase.com/*"
   ],
   "icons": {
     "16": "icons/icon-16.png",
@@ -18,7 +19,8 @@
     {
       "matches": [
         "https://www.bjs.com/*",
-        "https://global.americanexpress.com/*"
+        "https://global.americanexpress.com/*",
+        "https://secure.chase.com/*"
       ],
       "js": ["sites.js", "content.js"],
       "run_at": "document_idle"
